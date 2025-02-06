@@ -2,16 +2,15 @@
    "sourceName": "streamingcommunity",
    "iconUrl": "https://your-source.com/icon.png",
    "author": {
-       "name": "AuthorName",
+       "name": "Spottega",
        "icon": "https://your-source.com/author-icon.png"
    },
    "version": "1.0.0",
-   "language": "English (DUB)",
-   "streamType": "HLS",
+   "language": "italian",
+   "streamType": "mp4",
    "quality": "720p",
-   "baseUrl": "https://api.your-source.com/",
-   "searchBaseUrl": "https://your-source.com/search=%s,
+   "baseUrl": "https://streamingcommunity.paris/",
+   "searchBaseUrl": "https://streamingcommunity.paris/archivio?search=y",
    "scriptUrl": "https://your-source.com/script.js",
-   "asyncJS": true,
    "streamAsyncJS": true
 }
