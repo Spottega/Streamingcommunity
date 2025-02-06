@@ -11,6 +11,6 @@
    "quality": "720p",
    "baseUrl": "https://streamingcommunity.paris/",
    "searchBaseUrl": "https://streamingcommunity.paris/archivio?search=y",
-   "scriptUrl": "https://your-source.com/script.js",
+   "scriptUrl": "https://raw.githubusercontent.com/Spottega/Streamingcommunity/refs/heads/main/streamingcommunity.js",
    "streamAsyncJS": true
 }
