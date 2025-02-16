@@ -1,126 +1,212 @@
-function searchResults(html) {
-    const results = [];
-    const baseUrl = "https://streamingcommunity.lu/";
-    
-    const recordsRegex = /<archivio records="(.*?)"/;
-    const recordsMatch = html.match(recordsRegex);
-
-    if (!recordsMatch) {
-        return results;
-    }
-    
-    const recordsJson = recordsMatch[1].replace(/&quot;/g, '"');
-    let recordsData;
-    
+async function searchResults(keyword) {
     try {
-        recordsData = JSON.parse(recordsJson);
-    } catch (error) {
-        console.error('Error parsing JSON:', error);
-        return results;
-    }
-    
-    recordsData.forEach(record => {
-        if (!record || typeof record !== 'object') return;
+        const encodedKeyword = encodeURIComponent(keyword);
+        const responseText = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=653bb8af90162bd98fc7ee32bcbbfb3d&query=${encodedKeyword}`);
+        const data = JSON.parse(responseText);
 
-        const imageUrl = record.imageurl || '';
-        const title = record.title || record.title_eng || '';
-        const id = record.id || '';
-        const slug = record.slug || '';
-        
-        if (id && slug) {
-            const href = `${baseUrl}/${id}-${slug}`;
+        // Filter results to include only movies
+        const transformedResults = data.results
+            .filter(result => result.media_type === "movie") // Ensure only movies
+            .map(result => ({
+                title: result.title || result.name,
+                image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+                href: `https://streamingcommunity.lu/watch/titles/${result.id}`
+            }));
+
+
+        // const transformedResults = data.results.map(result => {
+        //     // For movies, TMDB returns "title" and media_type === "movie"
+        //     if(result.media_type === "movie" || result.title) {
+        //         return {
+        //             title: result.title || result.name,
+        //             image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+        //             href: `https://streamingcommunity.lu/watch/titles/${result.id}`
+        //         };
+        //     } else if(result.media_type === "tv" || result.name) {
+        //         // For TV shows, TMDB returns "name" and media_type === "tv"
+        //         return {
+        //             title: result.name || result.title,
+        //             image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+        //             href: `https://streamingcommunity.lu/watch/${result.id}`
+        //         };
+        //     } else {
+        //         // Fallback if media_type is not defined
+        //         return {
+        //             title: result.title || result.name || "Untitled",
+        //             image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+        //             href: `https://streamingcommunity.lu/watch/${result.id}`
+        //         };
+        //     }
+        // });
+
+        return JSON.stringify(transformedResults);
+    } catch (error) {
+        console.log('Fetch error in searchResults:', error);
+        return JSON.stringify([{ title: 'Error', image: '', href: '' }]);
+    }
+}
+
+async function extractDetails(url) {
+    try {
+        if(url.includes('/watch/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const movieId = match[1];
+            const responseText = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=653bb8af90162bd98fc7ee32bcbbfb3d`);
+            const data = JSON.parse(responseText);
+
+            const transformedResults = [{
+                description: data.overview || 'No description available',
+                aliases: `Duration: ${data.runtime ? data.runtime + " minutes" : 'Unknown'}`,
+                airdate: `Released: ${data.release_date ? data.release_date : 'Unknown'}`
+            }];
+
+            return JSON.stringify(transformedResults);
+        } else if(url.includes('/watch/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const showId = match[1];
+            const responseText = await fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=653bb8af90162bd98fc7ee32bcbbfb3d`);
+            const data = JSON.parse(responseText);
+
+            const transformedResults = [{
+                description: data.overview || 'No description available',
+                aliases: `Duration: ${data.episode_run_time && data.episode_run_time.length ? data.episode_run_time.join(', ') + " minutes" : 'Unknown'}`,
+                airdate: `Aired: ${data.first_air_date ? data.first_air_date : 'Unknown'}`
+            }];
+
+            return JSON.stringify(transformedResults);
+        } else {
+            throw new Error("Invalid URL format");
+        }
+    } catch (error) {
+        console.log('Details error:', error);
+        return JSON.stringify([{
+            description: 'Error loading description',
+            aliases: 'Duration: Unknown',
+            airdate: 'Aired/Released: Unknown'
+        }]);
+    }
+}
+
+async function extractEpisodes(url) {
+    try {
+        if(url.includes('/watch/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+            const movieId = match[1];
+            return JSON.stringify([
+                { href: `https://streamingcommunity.lu/watch/titles/${movieId}`, number: 1, title: "Full Movie" }
+            ]);
+        } else if(url.includes('/watch/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+            const showId = match[1];
             
-            results.push({
-                title: title.trim(),
-                image: imageUrl,
-                href: href
-            });
+            const showResponseText = await fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=653bb8af90162bd98fc7ee32bcbbfb3d`);
+            const showData = JSON.parse(showResponseText);
+            
+            let allEpisodes = [];
+            for (const season of showData.seasons) {
+                const seasonNumber = season.season_number;
+
+                if(seasonNumber === 0) continue;
+                
+                const seasonResponseText = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNumber}?api_key=653bb8af90162bd98fc7ee32bcbbfb3d`);
+                const seasonData = JSON.parse(seasonResponseText);
+                
+                if (seasonData.episodes && seasonData.episodes.length) {
+                    const episodes = seasonData.episodes.map(episode => ({
+                        href: `https://streamingcommunity.lu/watch/${showId}`,
+                        number: episode.episode_number,
+                        title: episode.name || ""
+                    }));
+                    allEpisodes = allEpisodes.concat(episodes);
+                }
+            }
+            
+            return JSON.stringify(allEpisodes);
+        } else {
+            throw new Error("Invalid URL format");
         }
-    });
-
-    return results;
-}
-
-function extractDetails(html) {
-    const details = [];
-    
-    const videoPlayerRegex = /<video-player anime="([^"]*)"/;
-    const videoPlayerMatch = html.match(videoPlayerRegex);
-
-    if (!videoPlayerMatch) {
-        return details;
-    }
-
-    const animeJson = videoPlayerMatch[1].replace(/&quot;/g, '"');
-    const animeData = JSON.parse(animeJson);
-
-    const description = animeData.plot || '';
-    const aliases = animeData.title_eng || '';
-    const airdate = animeData.title || '';
-
-    if (description && aliases && airdate && title) {
-        details.push({
-            description: description,
-            aliases: aliases,
-            airdate: airdate
-        });
-    }
-    
-    return details;
-}
-
-function extractEpisodes(html) {
-    const episodes = [];
-    
-    const videoPlayerRegex = /<video-player[^>]*anime="([^"]*)"[^>]*episodes="([^"]*)"/;
-    const videoPlayerMatch = html.match(videoPlayerRegex);
-
-    if (!videoPlayerMatch) {
-        return episodes;
-    }
-
-    const animeJson = videoPlayerMatch[1].replace(/&quot;/g, '"');
-    const animeData = JSON.parse(animeJson);
-    const slug = animeData.slug;
-    const idAnime = animeData.id;
-
-    const episodesJson = videoPlayerMatch[2].replace(/&quot;/g, '"');
-    const episodesData = JSON.parse(episodesJson);
-
-    episodesData.forEach(episode => {
-        episodes.push({
-            href: `https://streamingcommunity.lu/titles/${idAnime}-${slug}/${episode.id}`,
-            number: episode.number
-        });
-    });
-
-    return episodes;
-}
-
-async function extractStreamUrl(html) {
-    try {
-        const vixcloudMatch = html.match(/embed_url="(https:\/\/vixcloud\.co\/embed\/\d+\?[^"]+)"/);
-        if (!vixcloudMatch) {
-            console.log('No vixcloud.co URL found in the HTML.');
-            return null;
-        }
-
-        let vixcloudUrl = vixcloudMatch[1];
-        vixcloudUrl = vixcloudUrl.replace(/&amp;/g, '&');
-
-        const response = await fetch(vixcloudUrl);
-        const downloadUrlMatch = response.match(/window\.downloadUrl\s*=\s*['"]([^'"]+)['"]/);
-        
-        if (!downloadUrlMatch) {
-            console.log('No downloadUrl found in the response.');
-            return null;
-        }
-
-        const downloadURL = downloadUrlMatch[1];
-        console.log(downloadURL);
-        return downloadURL;
     } catch (error) {
-        console.log('Fetch error:', error);
+        console.log('Fetch error in extractEpisodes:', error);
+        return JSON.stringify([]);
+    }    
+}
+
+async function extractStreamUrl(url) {
+    const endpoints = [
+        "https://play2.123embed.net/server/3?path=/movie/",  
+        "https://moviekex.online/embed/api/fastfetch/",
+    ];
+
+    const servers = [
+        "?sr=3",
+        "?sr=2",
+        "?sr=1"
+    ];
+
+    try {
+        if (url.includes('/watch/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const movieId = match[1];
+
+            for (let i = 0; i < endpoints.length; i++) {
+                for (let j = 0; j < servers.length; j++) {
+                    try {
+                        let apiUrl = endpoints[i] === "https://play2.123embed.net/server/3?path=/movie/"
+                            ? `${endpoints[i]}${movieId}`
+                            : `${endpoints[i]}${movieId}${servers[j]}`;
+
+                        const responseText = await fetch(apiUrl);
+                        const data = JSON.parse(responseText);
+
+                        if (data) {
+                            if (endpoints[i] === "https://play2.123embed.net/server/3?path=/movie/") {
+                                const hlsSource = data.playlist?.find(source => source.type === 'hls');
+                                if (hlsSource?.file) return hlsSource.file;
+                            } else {
+                                const hlsSource = data.url?.find(source => source.type === 'hls');
+                                if (hlsSource?.link) return hlsSource.link;
+                            }
+                        }
+                    } catch (err) {
+                        console.log(`Fetch error on endpoint ${endpoints[i]} for movie ${movieId}:`, err);
+                    }
+                }
+            }
+            return null;
+        } else if (url.includes('/watch/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const showId = match[1];
+
+            for (let i = 0; i < servers.length; i++) {
+                try {
+                    const responseText = await fetch(`https://moviekex.online/embed/api/fastfetch/${showId}/${seasonNumber}/${episodeNumber}${servers[i]}`);
+                    const data = JSON.parse(responseText);
+
+                    if (data) {
+                        const hlsSource = data.url.find(source => source.type === 'hls');
+                        
+                        if (hlsSource && hlsSource.link) return hlsSource.link;
+                    }
+                } catch (err) {
+                    console.log(`Fetch error on endpoint https://moviekex.online/embed/api/fastfetch/ for TV show ${showId} S${seasonNumber}E${episodeNumber}:`, err);
+                }
+            }
+            return null;
+        } else {
+            throw new Error("Invalid URL format");
+        }
+    } catch (error) {
+        console.log('Fetch error in extractStreamUrl:', error);
         return null;
     }
 }
