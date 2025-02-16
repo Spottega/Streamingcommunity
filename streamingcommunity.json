@@ -1,16 +1,16 @@
 {
    "sourceName": "streamingcommunity",
-   "iconUrl": "https://github.com/Spottega/Streamingcommunity/blob/main/logo.png",
+   "iconUrl": "https://streamingcommunity.lu/img/logo.png",
    "author": {
        "name": "Spottega",
        "icon": "https://your-source.com/author-icon.png"
    },
-   "version": "1.0.1",
-   "language": "italian",
-   "streamType": "mp4",
+   "version": "1.0.2",
+   "language": "Italian",
+   "streamType": "HLS",
    "quality": "720p",
-   "baseUrl": "https://streamingcommunity.lu/",
-   "searchBaseUrl": "https://streamingcommunity.lu/archivio?search=y",
+   "baseUrl": "https://api.themoviedb.org/",
+   "searchBaseUrl": "https://api.themoviedb.org/3/search/multi?api_key=653bb8af90162bd98fc7ee32bcbbfb3d&query=%s",
    "scriptUrl": "https://raw.githubusercontent.com/Spottega/Streamingcommunity/refs/heads/main/streamingcommunity.js",
-   "streamAsyncJS": true
+   "asyncJS": true
 }
