@@ -5,7 +5,7 @@
        "name": "Spottega",
        "icon": "https://your-source.com/author-icon.png"
    },
-   "version": "1.0.2",
+   "version": "1.0.3",
    "language": "Italian",
    "streamType": "HLS",
    "quality": "720p",
