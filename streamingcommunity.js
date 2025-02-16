@@ -10,7 +10,7 @@ async function searchResults(keyword) {
             .map(result => ({
                 title: result.title || result.name,
                 image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
-                href: `https://streamingcommunity.lu/watch/titles/${result.id}`
+                href: `https://streamingcommunity.lu/titles/${result.id}`
             }));
 
 
@@ -20,7 +20,7 @@ async function searchResults(keyword) {
         //         return {
         //             title: result.title || result.name,
         //             image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
-        //             href: `https://streamingcommunity.lu/watch/titles/${result.id}`
+        //             href: `https://streamingcommunity.lu/titles/${result.id}`
         //         };
         //     } else if(result.media_type === "tv" || result.name) {
         //         // For TV shows, TMDB returns "name" and media_type === "tv"
@@ -48,8 +48,8 @@ async function searchResults(keyword) {
 
 async function extractDetails(url) {
     try {
-        if(url.includes('/watch/titles/')) {
-            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+        if(url.includes('/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/titles\/([^\/]+)/);
             if (!match) throw new Error("Invalid URL format");
 
             const movieId = match[1];
@@ -93,12 +93,12 @@ async function extractDetails(url) {
 
 async function extractEpisodes(url) {
     try {
-        if(url.includes('/watch/titles/')) {
-            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+        if(url.includes('/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/titles\/([^\/]+)/);
             if (!match) throw new Error("Invalid URL format");
             const movieId = match[1];
             return JSON.stringify([
-                { href: `https://streamingcommunity.lu/watch/titles/${movieId}`, number: 1, title: "Full Movie" }
+                { href: `https://streamingcommunity.lu/titles/${movieId}`, number: 1, title: "Full Movie" }
             ]);
         } else if(url.includes('/watch/')) {
             const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/([^\/]+)/);
@@ -150,8 +150,8 @@ async function extractStreamUrl(url) {
     ];
 
     try {
-        if (url.includes('/watch/titles/')) {
-            const match = url.match(/https:\/\/streamingcommunity\.lu\/watch\/titles\/([^\/]+)/);
+        if (url.includes('/titles/')) {
+            const match = url.match(/https:\/\/streamingcommunity\.lu\/titles\/([^\/]+)/);
             if (!match) throw new Error("Invalid URL format");
 
             const movieId = match[1];
