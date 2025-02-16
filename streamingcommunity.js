@@ -1,6 +1,6 @@
 function searchResults(html) {
     const results = [];
-    const baseUrl = "https://streamingcommunity.paris/";
+    const baseUrl = "https://streamingcommunity.lu/";
     
     const recordsRegex = /<archivio records="(.*?)"/;
     const recordsMatch = html.match(recordsRegex);
@@ -89,7 +89,7 @@ function extractEpisodes(html) {
 
     episodesData.forEach(episode => {
         episodes.push({
-            href: `https://streamingcommunity.paris/titles/${idAnime}-${slug}/${episode.id}`,
+            href: `https://streamingcommunity.lu/titles/${idAnime}-${slug}/${episode.id}`,
             number: episode.number
         });
     });
